@@ -15,3 +15,6 @@ evals/runs/
 
 # mac
 .DS_Store
+
+# generated upload folder
+build/
