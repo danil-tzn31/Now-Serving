@@ -10,7 +10,7 @@ source_urls:
   - https://consular.dfa.gov.ph/adult-renewal-non-epassport/
   - https://consular.dfa.gov.ph/passport-fees
 last_checked: 2026-10-26
-status: draft
+status: verified
 aliases:
   - renew passport
   - passport renewal

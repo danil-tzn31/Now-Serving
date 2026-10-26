@@ -10,7 +10,7 @@ source_urls:
   - https://consular.dfa.gov.ph/adult-new/
   - https://psahelpline.ph/psa-birth-certificate
 last_checked: 2026-10-26
-status: draft
+status: verified
 aliases:
   - no record psa
   - negative result birth certificate

@@ -10,7 +10,7 @@ source_urls:
   - https://consular.dfa.gov.ph/minor-renewal-epassport/
   - https://consular.dfa.gov.ph/passport-fees
 last_checked: 2026-10-26
-status: draft
+status: verified
 aliases:
   - passport for kids
   - passport ng anak

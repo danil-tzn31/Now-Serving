@@ -9,7 +9,7 @@ source_urls:
   - https://psa.gov.ph/birth-certificate
   - https://psahelpline.ph/psa-birth-certificate
 last_checked: 2026-10-26
-status: draft
+status: verified
 aliases:
   - psa walk in
   - psa appointment

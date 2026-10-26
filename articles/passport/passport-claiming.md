@@ -8,7 +8,7 @@ applies_to: anyone collecting a finished passport, or sending someone to collect
 source_urls:
   - https://consular.dfa.gov.ph/requirements-releasing/
 last_checked: 2026-10-26
-status: draft
+status: verified
 aliases:
   - claim passport
   - pick up passport

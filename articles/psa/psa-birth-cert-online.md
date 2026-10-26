@@ -10,7 +10,7 @@ source_urls:
   - https://psahelpline.ph/psa-birth-certificate
   - https://psa.gov.ph/system/files/citizens-charter/CRS-CRSD-8.pdf
 last_checked: 2026-10-26
-status: draft
+status: verified
 aliases:
   - order psa online
   - psa birth certificate delivery

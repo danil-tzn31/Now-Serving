@@ -9,7 +9,7 @@ source_urls:
   - https://psa.gov.ph/administrative-petition-for-correction
   - https://psahelpline.ph/psa-birth-certificate
 last_checked: 2026-10-26
-status: draft
+status: verified
 aliases:
   - correction birth certificate
   - mali ang pangalan sa birth certificate
