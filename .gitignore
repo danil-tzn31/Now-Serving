@@ -1,0 +1,17 @@
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# aws
+.aws-sam/
+samconfig.toml
+.env
+*accessKeys.csv
+
+# eval raw output, can hold full answers
+evals/runs/
+
+# mac
+.DS_Store
