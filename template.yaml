@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Now Serving answer API
+
+Parameters:
+  KnowledgeBaseId:
+    Type: String
+  GuardrailId:
+    Type: String
+  GuardrailVersion:
+    Type: String
+    Default: "1"
+  MinScore:
+    Type: String
+    Default: "0.45"
+  AllowedOrigin:
+    Type: String
+    Default: https://danil-tzn31.github.io
+
+Resources:
+  AskApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref AllowedOrigin
+          - http://localhost:8000
+        AllowMethods: [POST]
+        AllowHeaders: [content-type]
+      # Low on purpose. A shared link shouldn't be able to run up a bill.
+      DefaultRouteSettings:
+        ThrottlingRateLimit: 5
+        ThrottlingBurstLimit: 10
+
+  AnswerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: answer.handler
+      Runtime: python3.12
+      Architectures: [arm64]
+      MemorySize: 512
+      Timeout: 15
+      Environment:
+        Variables:
+          KB_ID: !Ref KnowledgeBaseId
+          MODEL_ID: us.amazon.nova-lite-v1:0
+          GUARDRAIL_ID: !Ref GuardrailId
+          GUARDRAIL_VERSION: !Ref GuardrailVersion
+          MIN_SCORE: !Ref MinScore
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: bedrock:Retrieve
+              Resource: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/${KnowledgeBaseId}
+            # The us. profile can route to any US region, so the model itself
+            # is allowed in all of them.
+            - Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource:
+                - !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/us.amazon.nova-lite-v1:0
+                - arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-lite-v1:0
+                - arn:aws:bedrock:us-east-2::foundation-model/amazon.nova-lite-v1:0
+                - arn:aws:bedrock:us-west-2::foundation-model/amazon.nova-lite-v1:0
+            # The guardrail uses cross-region inference, so it needs the
+            # guardrail profile plus the guardrail in whichever region runs it.
+            - Effect: Allow
+              Action: bedrock:ApplyGuardrail
+              Resource:
+                - !Sub arn:aws:bedrock:*:${AWS::AccountId}:guardrail/${GuardrailId}
+                - !Sub arn:aws:bedrock:*:${AWS::AccountId}:guardrail-profile/us.guardrail.v1:0
+      Events:
+        Ask:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AskApi
+            Path: /ask
+            Method: POST
+
+  AnswerLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AnswerFunction}
+      RetentionInDays: 14
+
+Outputs:
+  AskUrl:
+    Value: !Sub https://${AskApi}.execute-api.${AWS::Region}.amazonaws.com/ask
