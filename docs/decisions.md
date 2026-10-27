@@ -12,3 +12,9 @@ of about $350/month, which is more than my whole credit balance.
 Nova Lite for answers, Nova Pro for grading the eval, Titan V2 for
 embeddings. Sticking to Amazon's own models since the account runs on
 free credits only.
+
+## 2026-10-27: Guardrail checks the question first
+The fixer question scored too low to reach the model, so it got the
+"no article" reply instead of being blocked. Now the question goes through
+the guardrail before retrieval. Blocked topics stop there; masked numbers
+carry on, and only the masked text is searched and sent to the model.
