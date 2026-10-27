@@ -79,6 +79,7 @@ def test_answer_comes_with_its_sources(stubs):
         "usage": {"inputTokens": 10, "outputTokens": 5, "totalTokens": 15},
         "metrics": {"latencyMs": 100},
     })
+    runtime.add_response("apply_guardrail", PASSED)
 
     status, body = ask("pano mag-renew ng passport")
 
@@ -139,7 +140,82 @@ def test_masked_number_still_gets_an_answer(stubs):
         "usage": {"inputTokens": 10, "outputTokens": 5, "totalTokens": 15},
         "metrics": {"latencyMs": 100},
     })
+    runtime.add_response("apply_guardrail", PASSED)
 
     status, body = ask("pano mag-renew ng passport? 09171234567")
 
     assert body["grounded"] is True
+
+
+def test_model_saying_no_answer_becomes_the_fallback(stubs):
+    agent, runtime = stubs
+    runtime.add_response("apply_guardrail", PASSED)
+    agent.add_response("retrieve", {"retrievalResults": [chunk(0.5)]})
+    runtime.add_response("converse", {
+        "output": {"message": {"role": "assistant", "content": [{"text": "NO_ANSWER"}]}},
+        "stopReason": "end_turn",
+        "usage": {"inputTokens": 10, "outputTokens": 2, "totalTokens": 12},
+        "metrics": {"latencyMs": 100},
+    })
+
+    status, body = ask("How do I renew my Postal ID?")
+
+    assert body["grounded"] is False
+    assert body["answer"] == answer.FALLBACK
+    assert body["sources"] == []
+
+
+def test_ungrounded_answer_is_blocked(stubs):
+    agent, runtime = stubs
+    runtime.add_response("apply_guardrail", PASSED)
+    agent.add_response("retrieve", {"retrievalResults": [chunk(0.7)]})
+    runtime.add_response("converse", {
+        "output": {"message": {"role": "assistant", "content": [{"text": "It costs ₱5,000."}]}},
+        "stopReason": "end_turn",
+        "usage": {"inputTokens": 10, "outputTokens": 5, "totalTokens": 15},
+        "metrics": {"latencyMs": 100},
+    })
+    runtime.add_response("apply_guardrail", {
+        "usage": USAGE,
+        "action": "GUARDRAIL_INTERVENED",
+        "outputs": [{"text": "Sorry, I can't help with that."}],
+        "assessments": [{"contextualGroundingPolicy": {"filters": [
+            {"type": "GROUNDING", "threshold": 0.7, "score": 0.1, "action": "BLOCKED"},
+        ]}}],
+    })
+
+    status, body = ask("How much is a passport?")
+
+    assert body["grounded"] is False
+    assert body["sources"] == []
+
+
+@pytest.mark.parametrize("question, language", [
+    ("Can I expedite the processing time for my passport?", "English"),
+    ("pano mag-renew ng passport", "Taglish"),
+    ("magkano ang PSA birth certificate pag walk-in?", "Taglish"),
+    ("How do I renew my Postal ID?", "English"),
+    ("May I renew my passport online?", "English"),
+    ("May kilala ka bang fixer sa LTO?", "Taglish"),
+])
+def test_reply_language_follows_the_question(question, language):
+    assert answer.reply_language(question) == language
+
+
+def test_echoed_language_line_is_removed(stubs):
+    agent, runtime = stubs
+    runtime.add_response("apply_guardrail", PASSED)
+    agent.add_response("retrieve", {"retrievalResults": [chunk(0.76)]})
+    runtime.add_response("converse", {
+        "output": {"message": {"role": "assistant", "content": [
+            {"text": "Reply in English.\n\nBring your ePassport. Reply in English."},
+        ]}},
+        "stopReason": "end_turn",
+        "usage": {"inputTokens": 10, "outputTokens": 5, "totalTokens": 15},
+        "metrics": {"latencyMs": 100},
+    })
+    runtime.add_response("apply_guardrail", PASSED)
+
+    status, body = ask("What do I need to renew my passport?")
+
+    assert body["answer"] == "Bring your ePassport."

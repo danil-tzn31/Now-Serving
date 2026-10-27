@@ -18,3 +18,6 @@ The fixer question scored too low to reach the model, so it got the
 "no article" reply instead of being blocked. Now the question goes through
 the guardrail before retrieval. Blocked topics stop there; masked numbers
 carry on, and only the masked text is searched and sent to the model.
+
+## 2026-10-27: Removed the Legal disputes topic. 
+It blocked normal questions about birth records and corrections. Out-of-scope questions are already handled by MIN_SCORE and the model’s NO_ANSWER reply, so the guardrail only keeps topics that are actually harmful (fixers, fake documents).

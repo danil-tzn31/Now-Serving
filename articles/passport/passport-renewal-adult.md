@@ -17,6 +17,8 @@ aliases:
   - paano mag-renew ng passport
   - pa-renew ng passport
   - expired na passport ko
+  - expedite passport renewal
+  - mabilisang renewal ng passport
 ---
 
 # Renewing a passport (adults)
@@ -25,7 +27,8 @@ aliases:
 If your current passport is an ePassport, book an appointment and bring it
 with a photocopy of its data page and the filled-out form. Older passports
 (brown, green or maroon) are processed like a new application and need your
-PSA birth certificate and a valid ID.
+PSA birth certificate and a valid ID. Regular processing is ₱950 (12 business
+days); expedited is ₱1,200 (6 to 7 business days).
 
 ## Who this is for
 Filipinos aged 18 and over who already have a passport, valid or expired. If

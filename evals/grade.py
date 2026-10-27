@@ -51,8 +51,15 @@ def judge(prompt):
 
 
 def judge_correctness(q, answer):
-    must = "\n".join(f"- {m}" for m in q.get("must_include", [])) or "- (none)"
-    must_not = "\n".join(f"- {m}" for m in q.get("must_not_include", [])) or "- (none)"
+    # Banned strings are checked in code. Nova Pro got this wrong twice in
+    # v0.1, claiming a PhilSys number was in an answer when it wasn't.
+    leaked = [m for m in q.get("must_not_include", []) if m.lower() in answer.lower()]
+    if leaked:
+        return {"pass": False, "reason": f"contains {', '.join(leaked)}"}
+    if not q.get("must_include"):
+        return {"pass": True, "reason": "nothing required beyond the banned list"}
+
+    must = "\n".join(f"- {m}" for m in q["must_include"])
     return judge(f"""You are checking a support bot's answer against a list of facts.
 
 Question: {q['question']}
@@ -62,9 +69,6 @@ Answer:
 
 The answer must cover each of these (same meaning is enough, wording can differ):
 {must}
-
-The answer must not say any of these:
-{must_not}
 
 Reply with JSON only: {{"pass": true or false, "reason": "one short sentence"}}""")
 
@@ -104,14 +108,14 @@ def count(rows, key):
     return f"{sum(1 for r in scored if r[key])}/{len(scored)}"
 
 
-def report(run_path, rows):
+def report(run_path, rows, prompt_version):
     answerable = [r for r in rows if "correct" in r]
     refusals = [r for r in rows if "correct" not in r and "error" not in r]
     invented = [r for r in answerable if r["invented"]]
     lines = [
         f"# Eval run: {run_path.stem}",
         "",
-        "Prompt: answer_v1 · Chunking: fixed 300/15% · MIN_SCORE: 0.45 · Model: Nova Lite · Grader: Nova Pro",
+        f"Prompt: answer_{prompt_version} · Chunking: fixed 300/15% · MIN_SCORE: 0.45 · Model: Nova Lite · Grader: Nova Pro",
         "",
         "| Score | Result |",
         "| --- | --- |",
@@ -160,7 +164,8 @@ def main():
         print(reply["id"], "graded")
 
     out = HERE / "reports" / f"{run_path.stem}.md"
-    out.write_text(report(run_path, rows), encoding="utf-8")
+    prompt_version = next((r["prompt_version"] for r in replies if "prompt_version" in r), "?")
+    out.write_text(report(run_path, rows, prompt_version), encoding="utf-8")
     print(f"wrote {out.relative_to(HERE.parent)}")
 
 

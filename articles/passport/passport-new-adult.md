@@ -16,6 +16,9 @@ aliases:
   - paano kumuha ng passport
   - bagong passport
   - passport requirements
+  - expedite passport
+  - rush passport
+  - how long passport processing
 ---
 
 # Getting a passport for the first time (adults)
@@ -23,7 +26,8 @@ aliases:
 ## Summary
 Book an appointment at passport.gov.ph, then go in person with your PSA
 birth certificate, one valid ID and the filled-out application form. Regular
-processing costs ₱950 and takes 12 business days.
+processing costs ₱950 and takes 12 business days. If you need it sooner,
+expedited processing costs ₱1,200 and takes 6 to 7 business days.
 
 ## Who this is for
 Filipinos aged 18 and over applying for their very first passport. If you've

@@ -15,6 +15,9 @@ aliases:
   - kunin ang passport
   - pwede bang iba ang kumuha ng passport
   - authorization letter passport
+  - unclaimed passport
+  - claim passport after a year
+  - hindi ko pa nakukuha ang passport ko
 ---
 
 # Claiming your passport

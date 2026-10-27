@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 from pathlib import Path
 
 import boto3
@@ -16,7 +17,19 @@ GUARDRAIL_VERSION = os.environ["GUARDRAIL_VERSION"]
 MIN_SCORE = float(os.environ.get("MIN_SCORE", "0.45"))
 MAX_QUESTION_LENGTH = 500
 
-PROMPT_VERSION = "v1"
+# Nova Lite kept picking the wrong language when left to decide (English
+# questions got Taglish replies after Taglish aliases showed up in the
+# articles), so the code decides and tells it. Common Filipino words only;
+# one is enough to count as Taglish. "may" is left out because it's also
+# English ("May I renew online?").
+FILIPINO_WORDS = {
+    "ako", "ang", "ano", "ba", "bakit", "dito", "ito", "kailan", "kapag",
+    "ko", "kong", "kung", "mag", "magkano", "mga", "mo", "na", "nag",
+    "nawala", "ng", "ni", "pa", "paano", "pag", "pano", "po", "pwede",
+    "saan", "sa", "wala", "yung",
+}
+
+PROMPT_VERSION = "v3"
 PROMPT = (Path(__file__).parent / "prompts" / f"answer_{PROMPT_VERSION}.txt").read_text()
 
 FALLBACK = (
@@ -46,9 +59,10 @@ def handler(event, context):
     # Check the question on its own first. Otherwise a fixer question that
     # doesn't match any article just gets the "no article" reply, and the
     # denied topics never get a say.
-    question, blocked_message = check_question(question)
+    original = question
+    question, blocked_message, blocked_by = check_question(question)
     if blocked_message:
-        log(grounded=False, reason="guardrail_input")
+        log(grounded=False, reason="guardrail_input", blocked_by=blocked_by)
         return reply(200, answer_body(blocked_message, [], grounded=False))
 
     chunks = [c for c in retrieve(question) if c["score"] >= MIN_SCORE]
@@ -59,10 +73,22 @@ def handler(event, context):
         log(grounded=False, reason="low_score")
         return reply(200, answer_body(FALLBACK, [], grounded=False))
 
-    text, intervened = ask_model(question, chunks)
-    if intervened:
-        log(grounded=False, reason="guardrail")
-        return reply(200, answer_body(text or BLOCKED, [], grounded=False))
+    articles = format_articles(chunks)
+    masked = question != original
+    text = ask_model(question, articles, reply_language(question), masked)
+
+    # Prompt v2 asks the model to say NO_ANSWER when the articles don't cover
+    # the question. This has to come before the grounding check: "NO_ANSWER"
+    # isn't grounded in anything, so the check would block it with a score of
+    # zero, and the user got "can't help with that" instead of the fallback.
+    if text.strip().startswith("NO_ANSWER"):
+        log(grounded=False, reason="model_no_answer")
+        return reply(200, answer_body(FALLBACK, [], grounded=False))
+
+    blocked_message, checks = check_answer(question, articles, text)
+    if blocked_message:
+        log(grounded=False, reason="guardrail_output", checks=checks)
+        return reply(200, answer_body(blocked_message, [], grounded=False))
 
     sources = list_sources(chunks)
     log(grounded=True, articles=[s["id"] for s in sources], top_score=chunks[0]["score"])
@@ -77,24 +103,30 @@ def check_question(question):
         content=[{"text": {"text": question}}],
     )
     if result["action"] != "GUARDRAIL_INTERVENED":
-        return question, None
+        return question, None, []
 
     # Masking a phone or ID number also counts as an intervention, so look at
-    # what actually happened. Only a block stops the request.
+    # what actually happened. Only a block stops the request. The names of
+    # whatever blocked it get logged, so false blocks can be traced to a topic.
+    blocked_by = []
     for assessment in result.get("assessments", []):
         for policy in assessment.values():
             if not isinstance(policy, dict):
                 continue
             for items in policy.values():
-                if isinstance(items, list) and any(
-                    isinstance(i, dict) and i.get("action") == "BLOCKED" for i in items
-                ):
-                    outputs = result.get("outputs") or [{"text": BLOCKED}]
-                    return question, outputs[0]["text"]
+                if not isinstance(items, list):
+                    continue
+                for item in items:
+                    if isinstance(item, dict) and item.get("action") == "BLOCKED":
+                        blocked_by.append(item.get("name") or item.get("type") or "unknown")
+
+    if blocked_by:
+        outputs = result.get("outputs") or [{"text": BLOCKED}]
+        return question, outputs[0]["text"], blocked_by
 
     # Not blocked, so it was masked. Carry on with the masked text.
     masked = result.get("outputs") or [{"text": question}]
-    return masked[0]["text"], None
+    return masked[0]["text"], None, []
 
 
 def retrieve(question):
@@ -113,36 +145,82 @@ def retrieve(question):
     ]
 
 
-def ask_model(question, chunks):
-    articles = "\n\n---\n\n".join(
+def format_articles(chunks):
+    return "\n\n---\n\n".join(
         f"{c['meta'].get('title', 'Article')} (checked {c['meta'].get('last_checked', 'unknown')})\n{c['text']}"
         for c in chunks
     )
 
-    # The qualifiers tell the guardrail which part is the source and which is
-    # the question. Without them the grounding check has nothing to compare.
+
+def reply_language(question):
+    words = set(re.findall(r"[a-z]+", question.lower()))
+    return "Taglish" if words & FILIPINO_WORDS else "English"
+
+
+def system_prompt(language, masked):
+    blocks = [{"text": PROMPT}, {"text": f"Reply in {language}."}]
+    # With a number masked, the model kept answering the masked bit ("I can't
+    # help with ID numbers") instead of the actual question. See q05.
+    if masked:
+        blocks.append({"text": (
+            "Personal numbers in the question were hidden for privacy and show "
+            "up in curly braces. Ignore them and answer the rest of the question."
+        )})
+    return blocks
+
+
+def ask_model(question, articles, language, masked=False):
+    # No guardrail on this call. The question was already checked, and the
+    # answer is checked separately below, after the NO_ANSWER test.
     response = runtime.converse(
         modelId=MODEL_ID,
-        system=[{"text": PROMPT}],
+        # The language line goes in the system prompt. In the user message the
+        # model sometimes copied it into the answer ("... Reply in Taglish.").
+        system=system_prompt(language, masked),
         messages=[{
             "role": "user",
-            "content": [
-                {"text": "Articles, then the question:"},
-                {"guardContent": {"text": {"text": articles, "qualifiers": ["grounding_source"]}}},
-                {"guardContent": {"text": {"text": question, "qualifiers": ["query"]}}},
-            ],
+            "content": [{"text": f"Articles:\n\n{articles}\n\nQuestion: {question}"}],
         }],
         inferenceConfig={"maxTokens": 600, "temperature": 0.2},
-        guardrailConfig={
-            "guardrailIdentifier": GUARDRAIL_ID,
-            "guardrailVersion": GUARDRAIL_VERSION,
-        },
     )
-    if response["stopReason"] == "guardrail_intervened":
-        # The blocked message from the guardrail settings comes back as the reply.
-        content = response["output"]["message"]["content"]
-        return (content[0]["text"] if content else None), True
-    return response["output"]["message"]["content"][0]["text"], False
+    text = response["output"]["message"]["content"][0]["text"]
+    # Nova Lite still echoes the language line now and then, even from the
+    # system prompt. Cheaper to strip it than to keep rewording the prompt.
+    return re.sub(r"\s*Reply in (English|Taglish)\.\s*", "\n", text).strip()
+
+
+def check_answer(question, articles, text):
+    # The qualifiers tell the guardrail which part is the source and which is
+    # the question. Without them the grounding check has nothing to compare.
+    result = runtime.apply_guardrail(
+        guardrailIdentifier=GUARDRAIL_ID,
+        guardrailVersion=GUARDRAIL_VERSION,
+        source="OUTPUT",
+        content=[
+            {"text": {"text": articles, "qualifiers": ["grounding_source"]}},
+            {"text": {"text": question, "qualifiers": ["query"]}},
+            {"text": {"text": text, "qualifiers": ["guard_content"]}},
+        ],
+    )
+    if result["action"] != "GUARDRAIL_INTERVENED":
+        return None, []
+
+    # Grounding and relevance scores, logged for tuning. No answer text.
+    checks = []
+    for assessment in result.get("assessments", []):
+        for f in assessment.get("contextualGroundingPolicy", {}).get("filters", []):
+            if f.get("action") == "BLOCKED":
+                checks.append(f"{f['type']} {f['score']:.2f} (needs {f['threshold']})")
+        for t in assessment.get("topicPolicy", {}).get("topics", []):
+            if t.get("action") == "BLOCKED":
+                checks.append(f"topic {t['name']}")
+
+    # Detect-only findings (like a phone number in the answer) also count as
+    # an intervention, so only stop if something was actually blocked.
+    if not checks:
+        return None, []
+    outputs = result.get("outputs") or [{"text": BLOCKED}]
+    return outputs[0]["text"], checks
 
 
 def list_sources(chunks):
