@@ -1,0 +1,328 @@
+:root {
+  --paper: #f6f3ec;
+  --ticket: #fffdf8;
+  --ticket-muted: #efece5;
+  --ink: #1c1b19;
+  --muted: #5d5a53;
+  --line: #d6cfc0;
+  --accent: #9a5200;
+  --on-accent: #fffdf8;
+  /* The header stays dark in both modes, like the number board at a
+     government office, with the number in amber. */
+  --header: #24211e;
+  --on-header: #f3eee6;
+  --header-number: #f0a43a;
+  --error: #9b2c1d;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #171614;
+    --ticket: #211f1c;
+    --ticket-muted: #1c1b19;
+    --ink: #ece8df;
+    --muted: #a9a397;
+    --line: #3d3a34;
+    --accent: #f0a43a;
+    --on-accent: #1c1b19;
+    --header: #24211e;
+    --on-header: #f3eee6;
+    --header-number: #f0a43a;
+    --error: #f08a7a;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.55 var(--sans);
+}
+
+a { color: var(--accent); }
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Header, styled after the number display above a government counter */
+
+.counter {
+  background: var(--header);
+  color: var(--on-header);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 16px 14px;
+}
+
+.counter-row,
+.counter-note,
+main,
+.ask-bar form,
+.disclaimer {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.counter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.counter h1 {
+  margin: 0;
+  font: 600 1.35rem/1.2 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.counter-number {
+  margin: 0;
+  color: var(--header-number);
+  font: 600 1.35rem/1.2 var(--mono);
+}
+
+.counter-note {
+  margin-top: 4px;
+  margin-bottom: 0;
+  font-size: 0.9rem;
+}
+
+/* Before the first question, the intro and the question box sit together
+   in the middle of the screen. After it, answers fill the page and the
+   question box moves to the bottom. */
+.app {
+  min-height: calc(100vh - 86px);
+  min-height: calc(100dvh - 86px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 6vh;
+}
+
+.started .app {
+  justify-content: flex-start;
+  padding-bottom: 0;
+}
+
+.started main { flex: 1; }
+
+main {
+  width: 100%;
+  /* 640 plus the side padding, so the text lines up with the header */
+  max-width: 672px;
+  padding: 20px 16px 8px;
+}
+
+/* Start screen */
+
+.intro h2 {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.intro p { margin: 0 0 16px; color: var(--muted); }
+
+.intro-label {
+  font: 600 0.75rem var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.example {
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--ticket);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.example:hover { border-color: var(--accent); }
+
+/* Tickets */
+
+.tickets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ticket {
+  background: var(--ticket);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 4px;
+  margin: 16px 0;
+}
+
+.ticket.muted {
+  background: var(--ticket-muted);
+  border-left-color: var(--muted);
+}
+
+.ticket-head {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.ticket-head .number {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ticket-body {
+  padding: 8px 16px 14px;
+  overflow-wrap: anywhere;
+}
+
+.ticket-body p { margin: 0 0 8px; }
+.ticket-body p:last-child { margin-bottom: 0; }
+.ticket-body ul,
+.ticket-body ol { margin: 0 0 8px; padding-left: 22px; }
+
+.status {
+  font: 600 0.75rem var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+/* The tear line between the answer and its sources */
+.ticket-foot {
+  border-top: 2px dashed var(--line);
+  padding: 10px 16px 12px;
+  font-size: 0.9rem;
+}
+
+.source {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 2px 8px;
+  margin: 0 0 8px;
+}
+
+.source:last-child { margin-bottom: 0; }
+
+.source dt {
+  font: 600 0.75rem/1.9 var(--mono);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.source dd { margin: 0; }
+
+.waiting {
+  font-family: var(--mono);
+  color: var(--muted);
+}
+
+.waiting::after {
+  content: "";
+  animation: dots 1.2s steps(4) infinite;
+}
+
+@keyframes dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75% { content: "..."; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waiting::after { animation: none; content: "..."; }
+}
+
+.error {
+  border: 1px solid var(--error);
+  color: var(--error);
+  border-radius: 4px;
+  padding: 10px 14px;
+  margin: 16px 0;
+}
+
+/* Question bar, kept on screen at the bottom */
+
+.ask-bar {
+  padding: 4px 16px 10px;
+}
+
+.started .ask-bar {
+  position: sticky;
+  bottom: 0;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.ask-bar form {
+  display: flex;
+  gap: 8px;
+}
+
+.ask-bar input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--ink);
+  background: var(--ticket);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+.ask-bar input::placeholder { color: var(--muted); }
+
+.ask-bar button {
+  font: 600 0.95rem var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 0;
+  border-radius: 4px;
+  padding: 0 18px;
+  cursor: pointer;
+}
+
+.ask-bar button:disabled { opacity: 0.6; cursor: wait; }
+
+.disclaimer {
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}

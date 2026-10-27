@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Now Serving</title>
+  <meta name="description" content="Unofficial answers about Philippine passports and PSA birth certificates, from checked articles.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="counter">
+    <div class="counter-row">
+      <h1>Now Serving</h1>
+      <p class="counter-number" aria-hidden="true">No. <span id="served">00</span></p>
+    </div>
+    <p class="counter-note">Unofficial help with PH government papers</p>
+  </header>
+
+  <div class="app">
+  <main>
+    <section id="intro" class="intro">
+      <h2>What paper are you working on?</h2>
+      <p>
+        Ask about passports or PSA birth certificates. Answers come only from
+        articles I've checked against the DFA and PSA sites, and each one shows
+        where it came from.
+      </p>
+      <p class="intro-label">Try one of these</p>
+      <div class="examples">
+        <button type="button" class="example">How do I renew my passport?</button>
+        <button type="button" class="example">Magkano ang PSA birth certificate pag walk-in?</button>
+        <button type="button" class="example">What if I lost my passport?</button>
+        <button type="button" class="example">Pwede bang iba ang kumuha ng passport ko?</button>
+      </div>
+    </section>
+
+    <ol id="tickets" class="tickets" aria-live="polite" aria-label="Answers"></ol>
+  </main>
+
+  <footer class="ask-bar">
+    <form id="ask-form">
+      <label for="question" class="visually-hidden">Your question</label>
+      <input id="question" name="question" type="text" maxlength="500"
+             autocomplete="off" placeholder="Ask a question" required>
+      <button type="submit" id="ask-button">Ask</button>
+    </form>
+    <p class="disclaimer">
+      Not affiliated with the DFA or PSA. Always check the official page before
+      you go. <a href="https://github.com/danil-tzn31/Now-Serving">How this works</a>
+    </p>
+  </footer>
+  </div>
+
+  <script src="chat.js"></script>
+</body>
+</html>
